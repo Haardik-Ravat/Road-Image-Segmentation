@@ -140,6 +140,5 @@ if uploaded_file is not None:
         with st.spinner("Running..."):
             predictions = predict(image, model_new)
       
-            colormap = plt.cm.hsv(predictions)
-
-            st.image([image, predictions, colormap], width=200, clamp=True)
+            ig= px.imshow(predictions)
+            st.plotly_chart(ig)
