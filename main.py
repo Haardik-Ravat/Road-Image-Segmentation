@@ -31,6 +31,7 @@ colors = {
     11: [48.88183862, 203.80514614, 203.66699975]
 }
 
+
 class Net(nn.Module):
     def __init__(self, num_classes):
         super(Net, self).__init__()
@@ -124,6 +125,7 @@ st.title("Road Image Segmentation")
 uploaded_file = st.file_uploader("Upload an image", type=["jpg", "jpeg", "png"])
 
 if uploaded_file is not None:
+    st.image(uploaded_file, width=200, clamp=True)
     st.subheader("Prediction using Low noise model")
     if st.button("RUN", key=0):
         image = Image.open(uploaded_file)
@@ -141,4 +143,5 @@ if uploaded_file is not None:
             predictions = predict(image, model_new)
       
             ig= px.imshow(predictions)
+       
             st.plotly_chart(ig)
