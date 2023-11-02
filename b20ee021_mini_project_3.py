@@ -108,7 +108,7 @@ plt.show()
 """## Kmeans Clustering"""
 
 kmeans_data = []
-for i in train_files_mask[:100]:
+for i in train_files_mask[:150]:
     org_img = cv2.imread(i)
 
     msk = org_img
@@ -210,13 +210,10 @@ class Dataset(Dataset):
         if self.augmentation:
             trans_obj = A.Compose([A.Resize(self.size, self.size),
                            A.Rotate(angle, border_mode=4, p=0.5),
-                           A.HorizontalFlip(p=0.3),
-                           A.VerticalFlip(p=0.3),
-                           A.OneOf([A.OpticalDistortion(),A.ElasticTransform()],  p=0.4),
+
                            A.CoarseDropout(max_holes=30, max_height=int(self.size*0.015),
                                          max_width=int(self.size*0.015), fill_value=255, p=0.4),
-                           A.RandomBrightnessContrast(brightness_limit=0.3,p = 0.4),
-                           A.RandomSnow(snow_point_lower=0.4,snow_point_upper=0.5,brightness_coeff=1.5,p = 0.4),
+
                            A.Normalize(self.mean, self.std)
                           ])
         else:
@@ -231,20 +228,11 @@ class Dataset(Dataset):
 train_data_obj = Dataset(train_files,train_files_mask, INPUT_IMG_SIZE, AUGMENTATION, mean=MEAN, std=STD)
 val_data_obj = Dataset(test_files, test_files_mask, INPUT_IMG_SIZE, AUGMENTATION, mean=MEAN, std=STD)
 
+train_data_rot = Dataset(train_files,train_files_mask, INPUT_IMG_SIZE, True, mean=MEAN, std=STD)
+val_data_rot = Dataset(test_files, test_files_mask, INPUT_IMG_SIZE, True, mean=MEAN, std=STD)
+
 print(train_data_obj.__len__())
 print(val_data_obj.__len__())
-
-for i in range(5):
-    img,  msk = train_data_obj.__getitem__(i)
-    print(img.shape, msk.shape)
-    print(img.max(), img.min())
-    print(msk.max(), msk.min())
-    plt.figure(figsize=(15,10))
-    plt.subplot(1,2,1)
-    plt.imshow(img.permute(1,2,0))
-    plt.subplot(1,2,2)
-    plt.imshow(msk)
-    plt.show()
 
 """### Augmented Datasets"""
 
@@ -305,6 +293,69 @@ val_data_aug = Dataset_aug(test_files, test_files_mask, INPUT_IMG_SIZE, True, me
 print(train_data_aug.__len__())
 print(val_data_aug.__len__())
 
+"""### Downloading Data"""
+
+import os
+
+directory_path1 = './Noisy_Data'
+directory_path2 = './Heavy_doped_data'
+train_img = '/Train'
+test_img = '/Test'
+imagespt='/Images'
+maskspt='/Masks'
+
+os.makedirs(directory_path1+test_img+maskspt, exist_ok=True)
+os.makedirs(directory_path1+test_img+imagespt, exist_ok=True)
+os.makedirs(directory_path1+train_img+maskspt, exist_ok=True)
+os.makedirs(directory_path1+train_img+imagespt, exist_ok=True)
+
+os.makedirs(directory_path2+test_img+maskspt, exist_ok=True)
+os.makedirs(directory_path2+test_img+imagespt, exist_ok=True)
+os.makedirs(directory_path2+train_img+maskspt, exist_ok=True)
+os.makedirs(directory_path2+train_img+imagespt, exist_ok=True)
+
+def exp(dataset,path):
+  for i in range(dataset.__len__()):
+    img,  msk = dataset.__getitem__(i)
+    img=img.permute(1,2,0)
+    img=img.numpy()*255
+    img=cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
+    cv2.imwrite(path+"Image_"+str(i)+".jpg", img)
+
+def expm(dataset,path):
+  for i in range(dataset.__len__()):
+    img,  msk = dataset.__getitem__(i)
+    msk=msk.numpy()*255
+    plt.imsave(path+"Mask_"+str(i)+".jpg", msk)
+
+# These functions were run only to save dataset, no need to run them again
+
+"""### Visualizing"""
+
+for i in range(5):
+    img,  msk = train_data_obj.__getitem__(i)
+    print(img.shape, msk.shape)
+    print(img.max(), img.min())
+    print(msk.max(), msk.min())
+    plt.figure(figsize=(15,10))
+    plt.subplot(1,2,1)
+    plt.imshow(img.permute(1,2,0))
+    plt.subplot(1,2,2)
+    plt.imshow(msk)
+    plt.show()
+
+for i in range(5):
+    img,  msk = train_data_rot.__getitem__(i)
+    print(img.shape, msk.shape)
+    print(img.max(), img.min())
+    print(msk.max(), msk.min())
+    plt.figure(figsize=(15,10))
+    plt.subplot(1,2,1)
+    plt.imshow(img.permute(1,2,0))
+    plt.subplot(1,2,2)
+    plt.imshow(msk)
+    plt.show()
+
 for i in range(5):
     img,  msk = train_data_aug.__getitem__(i)
     print(img.shape, msk.shape)
@@ -317,7 +368,43 @@ for i in range(5):
     plt.imshow(msk)
     plt.show()
 
-"""## Trainer"""
+x=0
+img,  msk = train_data_aug.__getitem__(x)
+
+img_obj, msk_obj = train_data_obj.__getitem__(x)
+
+img_rot, msk_rot = train_data_rot.__getitem__(x)
+
+plt.figure(figsize=(15, 15))
+
+plt.subplot(3, 2, 1)
+plt.imshow(img.permute(1, 2, 0))
+plt.title("Highly Doped - Image")
+plt.subplot(3, 2, 2)
+plt.imshow(msk)
+plt.title("Highly Doped - Mask")
+
+plt.subplot(3, 2, 3)
+plt.imshow(img_obj.permute(1, 2, 0))
+plt.title("Original Dataset - Image")
+plt.subplot(3, 2, 4)
+plt.imshow(msk_obj)
+plt.title("Original Dataset - Mask")
+
+plt.subplot(3, 2, 5)
+plt.imshow(img_rot.permute(1, 2, 0))
+plt.title("Noisy Dataset - Image")
+plt.subplot(3, 2, 6)
+plt.imshow(msk_rot)
+plt.title("Noisy Dataset - Mask")
+
+plt.tight_layout()
+plt.show()
+
+"""## Initializing Model
+
+### Trainer
+"""
 
 class Trainer:
     def __init__(self,
@@ -546,11 +633,9 @@ class Trainer:
                 self.scheduler.step()
         train_results = [epoch_counter_list, train_loss_list, train_accuracy_list, val_loss_list, val_accuracy_list]
         self.plot_logs(train_results)
+        return train_results
 
-"""## Defining Model
-
-### Initializing
-"""
+"""### Architecture"""
 
 class Net(nn.Module):
     def __init__(self, num_classes):
@@ -618,11 +703,12 @@ nt = Net(12)
 
 nt(torch.zeros(2,3,128,128)).shape
 
+print(nt)
 
+"""## Training and Testing Models
 
-
-
-"""### Training"""
+### Original model --> Original Dataset
+"""
 
 unet = Net(num_classes=OUTPUT_CLASSES)
 
@@ -631,7 +717,183 @@ loss_function = nn.CrossEntropyLoss()
 
 trainer =  Trainer(model = model,
                   crit = loss_function,
+                  train_data = train_data_obj,
+                  val_data = val_data_obj,
+                  initialize_from_ckp = None,
+                  opti_name = OPIMIZER_NAME,
+                  scheduler_name = SCHEDULER_NAME,
+                  input_img_size = INPUT_IMG_SIZE,
+                  batch_size = BATCH_SIZE,
+                  out_classes = OUTPUT_CLASSES,
+                  use_cuda = USE_CUDA,
+                  max_epochs = MAX_EPOCHS,
+
+                  learning_rate = LEARINING_RATE,
+                  thresh_acc = THRESH_ACC_CKP,
+                  step_size = SCHEDULER_STEP_SIZE
+                 )
+
+base=trainer.train()
+
+torch.save(model.state_dict(), 'model_org.pth')
+torch.save(model.state_dict(), 'model_org.pt')
+
+import pickle
+pickle.dump(model, open('model_org_pkl.sav', 'wb'))
+
+base
+
+"""### Original model --> Low noise Dataset"""
+
+unet_rot = Net(num_classes=OUTPUT_CLASSES)
+
+model1 = unet_rot
+loss_function = nn.CrossEntropyLoss()
+
+trainer =  Trainer(model = model1,
+                  crit = loss_function,
+                  train_data = train_data_obj,
+                  val_data = val_data_rot,
+                  initialize_from_ckp = None,
+                  opti_name = OPIMIZER_NAME,
+                  scheduler_name = SCHEDULER_NAME,
+                  input_img_size = INPUT_IMG_SIZE,
+                  batch_size = BATCH_SIZE,
+                  out_classes = OUTPUT_CLASSES,
+                  use_cuda = USE_CUDA,
+                  max_epochs = MAX_EPOCHS,
+                  learning_rate = 0.001,
+                  thresh_acc = THRESH_ACC_CKP,
+                  step_size = SCHEDULER_STEP_SIZE
+                 )
+
+aug1=trainer.train()
+
+torch.save(model.state_dict(), 'model_2.pth')
+torch.save(model.state_dict(), 'model_2.pt')
+
+import pickle
+pickle.dump(model, open('model_2_pkl.sav', 'wb'))
+
+aug1
+
+"""### Low noise model --> Low noise Dataset"""
+
+unet_aug = Net(num_classes=OUTPUT_CLASSES)
+
+model3 = unet_aug
+loss_function = nn.CrossEntropyLoss()
+
+trainer =  Trainer(model = model3,
+                  crit = loss_function,
+                  train_data = train_data_rot,
+                  val_data = val_data_rot,
+                  initialize_from_ckp = None,
+                  opti_name = OPIMIZER_NAME,
+                  scheduler_name = SCHEDULER_NAME,
+                  input_img_size = INPUT_IMG_SIZE,
+                  batch_size = BATCH_SIZE,
+                  out_classes = OUTPUT_CLASSES,
+                  use_cuda = USE_CUDA,
+                  max_epochs = MAX_EPOCHS,
+
+                  learning_rate = 0.001,
+                  thresh_acc = THRESH_ACC_CKP,
+                  step_size = SCHEDULER_STEP_SIZE
+                 )
+
+aug2=trainer.train()
+
+torch.save(model.state_dict(), 'model_3.pth')
+torch.save(model.state_dict(), 'model_3.pt')
+
+import pickle
+pickle.dump(model, open('model_3_pkl.sav', 'wb'))
+
+aug2
+
+"""### Low noise model --> Original Dataset"""
+
+unet_old = Net(num_classes=OUTPUT_CLASSES)
+
+model4 = unet_old
+loss_function = nn.CrossEntropyLoss()
+
+trainer =  Trainer(model = model4,
+                  crit = loss_function,
+                  train_data = train_data_rot,
+                  val_data = val_data_obj,
+                  initialize_from_ckp = None,
+                  opti_name = OPIMIZER_NAME,
+                  scheduler_name = SCHEDULER_NAME,
+                  input_img_size = INPUT_IMG_SIZE,
+                  batch_size = BATCH_SIZE,
+                  out_classes = OUTPUT_CLASSES,
+                  use_cuda = USE_CUDA,
+                  max_epochs = MAX_EPOCHS,
+
+                  learning_rate = 0.001,
+                  thresh_acc = THRESH_ACC_CKP,
+                  step_size = SCHEDULER_STEP_SIZE
+                 )
+
+aug3=trainer.train()
+
+torch.save(model.state_dict(), 'model_4.pth')
+torch.save(model.state_dict(), 'model_4.pt')
+
+import pickle
+pickle.dump(model, open('model_4_pkl.sav', 'wb'))
+
+aug3
+
+"""
+### High noise model --> Low Noise Dataset"""
+
+unet_hg = Net(num_classes=OUTPUT_CLASSES)
+
+model5 = unet_hg
+loss_function = nn.CrossEntropyLoss()
+
+trainer =  Trainer(model = model5,
+                  crit = loss_function,
                   train_data = train_data_aug,
+                  val_data = val_data_rot,
+                  initialize_from_ckp = None,
+                  opti_name = OPIMIZER_NAME,
+                  scheduler_name = SCHEDULER_NAME,
+                  input_img_size = INPUT_IMG_SIZE,
+                  batch_size = BATCH_SIZE,
+                  out_classes = OUTPUT_CLASSES,
+                  use_cuda = USE_CUDA,
+                  max_epochs = MAX_EPOCHS,
+                  #  max_epochs = 5,
+                  learning_rate = 0.001,
+                  thresh_acc = THRESH_ACC_CKP,
+                  step_size = SCHEDULER_STEP_SIZE
+                 )
+
+aug4=trainer.train()
+
+torch.save(model.state_dict(), 'model_5.pth')
+torch.save(model.state_dict(), 'model_5.pt')
+
+import pickle
+pickle.dump(model, open('model_5_pkl.sav', 'wb'))
+
+aug4
+
+"""
+### Low noise model --> High Noise Dataset"""
+
+unet_new = Net(num_classes=OUTPUT_CLASSES)
+
+model6 = unet_new
+loss_function = nn.CrossEntropyLoss()
+
+trainer =  Trainer(model = model6,
+                  crit = loss_function,
+                  train_data = train_data_rot,
                   val_data = val_data_aug,
                   initialize_from_ckp = None,
                   opti_name = OPIMIZER_NAME,
@@ -640,39 +902,35 @@ trainer =  Trainer(model = model,
                   batch_size = BATCH_SIZE,
                   out_classes = OUTPUT_CLASSES,
                   use_cuda = USE_CUDA,
-                  # max_epochs = MAX_EPOCHS,
-                   max_epochs = 2,
-                  learning_rate = LEARINING_RATE,
+                  max_epochs = MAX_EPOCHS,
+                  #  max_epochs = 5,
+                  learning_rate = 0.001,
                   thresh_acc = THRESH_ACC_CKP,
                   step_size = SCHEDULER_STEP_SIZE
                  )
 
-trainer.train()
+aug5=trainer.train()
 
-"""## Defining Improved Model
+torch.save(model.state_dict(), 'model_6.pth')
+torch.save(model.state_dict(), 'model_6.pt')
 
-### Initializing
-"""
-
-
-
-
-
-"""### Training Improved Model"""
-
-
-
-
-
-
+aug5
 
 """## Comparative Analysis"""
 
+x = 4
+values = [base[x][9], aug1[x][9], aug2[x][9], aug3[x][9], aug4[x][9], aug5[x][9]]
 
+fig, ax = plt.subplots()
+bar = ax.bar(range(1, 7), values)
+ax.set_xticks(range(1, 7))
+ax.set_xticklabels(['Original-Original', 'Original-Noisy', 'Noisy-Noisy', 'Noisy-Original', 'Heavy Doped-Noisy', 'Noisy-Heavy doped'], rotation=45, fontsize=8)
+plt.xlabel('Trained dataset - Testing dataset')
+plt.ylabel('IoU Scores')
+plt.title('Comparative Analysis')
 
+for i in range(6):
+    ax.annotate(f"{values[i]:.3f}", (i + 1, values[i]), ha='center', va='bottom')
 
-
-"""## Streamlit Deployment"""
-
-
-
+plt.tight_layout()
+plt.show()
