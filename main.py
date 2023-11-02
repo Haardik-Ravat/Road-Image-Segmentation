@@ -1,25 +1,16 @@
 import streamlit as st
 import torch
-import torchvision
+
 import torchvision.transforms as transforms
-import os
-import io
+
 from PIL import Image
-import sys
+
 import numpy as np
 import matplotlib.pyplot as plt
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
-import torch.optim as optim
 
 import torch.profiler
-from torch.utils.data import DataLoader, TensorDataset
-from torch.utils.data import random_split
-import torchvision
-import torchvision.utils
-from torchvision import models
-import torchvision.datasets as dsets
 import torchvision.transforms as transforms
 
 from matplotlib.colors import LinearSegmentedColormap
@@ -103,11 +94,11 @@ class Net(nn.Module):
         return output_out
 
 model=Net(12)
-model.load_state_dict(torch.load('./model_3.pth', map_location = 'cpu'))
+model.load_state_dict(torch.load('./low_noise_model.pth', map_location = 'cpu'))
 
 # improved model
-model_improved = Net(12)
-model_improved.load_state_dict(torch.load('./model_3.pth', map_location='cpu'))
+model_new = Net(12)
+model_new.load_state_dict(torch.load('./low_noise_model.pth', map_location='cpu'))
 
 
 h, w = 128, 128
@@ -123,37 +114,33 @@ def predict(image, model):
     with torch.no_grad():
         model.eval()
         prediction = model(image).squeeze()
-        # select maximum 
         prediction = torch.argmax(prediction, dim=0)
-
-        # scale between 0 and 1
         prediction = (prediction-prediction.min()) / (prediction.max()-prediction.min())
-        # convert to numpy
         prediction = prediction.numpy()
     return prediction
 
-# UI
-st.title("Semantic Segmentation")
+
+st.title("Road Image Segmentation")
 
 uploaded_file = st.file_uploader("Upload an image", type=["jpg", "jpeg", "png"])
 
 if uploaded_file is not None:
-    st.subheader("Prediction using Original Model")
-    if st.button("Predict", key=0):
+    st.subheader("Prediction using Low noise model")
+    if st.button("RUN", key=0):
         image = Image.open(uploaded_file)
-        with st.spinner("Predicting..."):
+        with st.spinner("Running..."):
             predictions = predict(image, model)
-            # apply cmap to predictions to convert to RGB
+      
             colormap = custom_cmap(predictions)
-            # append image, predictions and colormap horizontally
+      
             st.image([image, predictions, colormap], width=200, clamp=True)
 
-    st.subheader("Prediction using Improved Model")
-    if st.button("Predict", key=1):
+    st.subheader("Prediction using High noise model")
+    if st.button("RUN", key=1):
         image = Image.open(uploaded_file)
-        with st.spinner("Predicting..."):
-            predictions = predict(image, model_improved)
-            # apply cmap to predictions to convert to RGB
+        with st.spinner("Running..."):
+            predictions = predict(image, model_new)
+      
             colormap = plt.cm.hsv(predictions)
-            # append image, predictions and colormap horizontally
+
             st.image([image, predictions, colormap], width=200, clamp=True)
